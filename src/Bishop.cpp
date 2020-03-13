@@ -19,8 +19,8 @@ Figure* Bishop::clone() const {
 }
 
 bool Bishop::isMoveLegal(sf::Vector2i newPos, SpecialMove& special) {
-	int dx = pos.x - oldPos.x;
-	int dy = pos.y - oldPos.y;
+	int dx = newPos.x - pos.x;
+	int dy = newPos.y - pos.y;
 
 	if (dx == 0 && dy == 0)
 		return false;

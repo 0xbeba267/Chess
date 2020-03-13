@@ -20,16 +20,6 @@ ChessboardField::ChessboardField(int boardX, int boardY, int x, int y,
 	status = U;	// unoccupied by default
 }
 
-ChessboardField::ChessboardField(const ChessboardField & old) {
-	setPosition(old.getPosition());
-	setSize(old.getSize());
-
-	onBoardPos = old.onBoardPos;
-
-	indc = old.indc;
-	status = old.status;
-}
-
 sf::Vector2i ChessboardField::getBoardPos() {
 	return onBoardPos;
 }

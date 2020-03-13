@@ -38,6 +38,7 @@ ChessboardWithPieces & ChessboardWithPieces::operator=(
 	// clear previous figures and moves first
 	for (auto * f : figures)
 		delete f;
+
 	figures.clear();
 	moves.clear();
 

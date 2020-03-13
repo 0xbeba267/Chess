@@ -22,7 +22,7 @@ class Figure;
 class ChessboardField: public sf::RectangleShape {
 public:
 	ChessboardField();
-	ChessboardField(const ChessboardField & old);
+
 	ChessboardField(int boardX, int boardY, int x, int y, ChessColor k, std::string indc);
 
 	// get or set current occupier of the field
