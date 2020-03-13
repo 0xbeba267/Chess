@@ -109,10 +109,15 @@ void Game::run() {
 
 void Game::initialize() {
 	// matrix which contains numbers representing figures and colors
-	int board[8][8] = { -1, -2, -3, -4, -5, -3, -2, -1, -6, -6, -6, -6, -6, -6,
-			-6, -6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 6, 6, 6, 6, 6, 6, 6, 1, 2, 3,
-			4, 5, 3, 2, 1 };
+	int board[8][8] ={
+						-1, -2, -3, -4, -5, -3, -2, -1,
+						-6, -6, -6, -6, -6, -6,	-6, -6,
+						 0,  0,  0,  0,  0,  0,  0,  0,
+						 0,  0,  0,  0,  0,  0,  0,  0,
+						 0,  0,  0,  0,  0,  0,  0,  0,
+						 0,  0,  0,  0,  0,  0,  0,  0,
+						 6,  6,  6,  6,  6,  6,  6,  6,
+						 1,  2,  3,  4,  5,  3,  2,  1 };
 	ChessColor currentColor;
 	for (int i = 0; i < 8; i++)
 		for (int j = 0; j < 8; j++) {
@@ -453,18 +458,18 @@ bool Game::isKingCheckmated(ChessColor color) {
 }
 
 void Game::acceptMove(Move moveToAccept) {
-// switch player
+	// switch player
 	if (currPlayer == W)
 		currPlayer = B;
 	else if (currPlayer == B)
 		currPlayer = W;
 
-// currPlayer in actions above is now opponent!
+	// currPlayer in actions above is now opponent!
 
 	if (currPlayer == B)
 		waitingForStockfishAnswer = true;
 
-// check if opponent's king is checked
+	// check if opponent's king is checked
 	if (isKingChecked(currPlayer)) {
 		notation.check = CHECK;
 		// recognize if there is also checkmate
@@ -478,9 +483,9 @@ void Game::acceptMove(Move moveToAccept) {
 }
 
 bool Game::initAI() {
-// 1) Run stockfish with isready parameter
+	// 1) Run stockfish with isready parameter
 	system("stockfish isready > output.tmp");
-// 2) Read the output of stockfish
+	// 2) Read the output of stockfish
 	std::string outputMsg;
 	outputFile.open("output.tmp", std::ios::in);
 	std::string s;
@@ -491,7 +496,7 @@ bool Game::initAI() {
 			outputMsg = s;
 		line++;
 	}
-// 3) If asnswer is same as expected return true
+	// 3) If asnswer is same as expected return true
 	outputFile.close();
 	string expected_answer = "readyok";
 	string answer = outputMsg.substr(0, expected_answer.length());
@@ -502,10 +507,10 @@ bool Game::initAI() {
 }
 
 void Game::letEngineMove() {
-// redirection board setup as input for stockfish program
-// then redirection output to text file and read it to get answer
+	// redirection board setup as input for stockfish program
+	// then redirection output to text file and read it to get answer
 
-// 1) Send information about last move
+	// 1) Send information about last move
 	inputFile.open("input.tmp", std::ios::out);
 	inputFile << "position startpos moves ";
 	for (auto m : chessboard.moves) {
@@ -532,7 +537,7 @@ void Game::letEngineMove() {
 	inputFile.close();
 	system("stockfish < input.tmp > output.tmp");
 
-// 2) Read the output of stockfish
+	// 2) Read the output of stockfish
 	std::string outputMsg;
 	outputFile.open("output.tmp", std::ios::in);
 	std::string s;
@@ -545,21 +550,21 @@ void Game::letEngineMove() {
 	}
 	outputFile.close();
 
-// TODO try decode 3 characters from second move to make promotion automatically
-// 3) Decode output to get the best move as indication
+	// TODO try decode 3 characters from second move to make promotion automatically
+	// 3) Decode output to get the best move as indication
 	string moveFromIndc = outputMsg.substr(9, 2);
 	string moveToIndc = outputMsg.substr(11, 2);
 
 	Figure* movingFigure = nullptr;
 	ChessboardField* newField = nullptr;
-// locate figure on starting field
+	// locate figure on starting field
 	for (int i = 0; i < 8; i++)
 		for (int j = 0; j < 8; j++) {
 			if (chessboard.field[i][j].indc == moveFromIndc)
 				movingFigure = chessboard.getFigureOnPos(
 						chessboard.field[i][j].getBoardPos());
 		}
-// find new field on the chessboard
+	// find new field on the chessboard
 	for (int i = 0; i < 8; i++)
 		for (int j = 0; j < 8; j++) {
 			if (chessboard.field[i][j].indc == moveToIndc)
