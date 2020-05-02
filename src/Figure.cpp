@@ -30,4 +30,3 @@ Figure::Figure(const Figure & old) {
 
 Figure::~Figure() {
 }
-

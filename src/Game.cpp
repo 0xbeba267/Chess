@@ -198,8 +198,10 @@ bool Game::tryPlayMove(Figure *figure, ChessboardField* newField,
 	// variable which is used to receive special move signal
 	SpecialMove spcMv = NONE;
 
-	// destination field on which figure tries to move
+	// information about castling in current move
+	Castling castling = NO_CASTLING;
 
+	// destination field on which figure tries to move
 	if (figure->isMoveLegal(newField->getBoardPos(), spcMv)) {
 		/* move of current figure looks correct
 		 *
@@ -256,7 +258,7 @@ bool Game::tryPlayMove(Figure *figure, ChessboardField* newField,
 
 						chessboard.moveFigureOnField(f,
 								chessboard.locateField(rookNewPos));
-						notation.castling = LONG_CASTLING;
+						castling = LONG_CASTLING;
 					}
 			// castle kingside ->  move rook from 'f' column to king's x - 1
 			if (dx == 2)
@@ -268,7 +270,7 @@ bool Game::tryPlayMove(Figure *figure, ChessboardField* newField,
 
 						chessboard.moveFigureOnField(f,
 								chessboard.locateField(rookNewPos));
-						notation.castling = SHORT_CASTLING;
+						castling = SHORT_CASTLING;
 					}
 		}
 
@@ -311,6 +313,9 @@ bool Game::tryPlayMove(Figure *figure, ChessboardField* newField,
 		// set notation for current move
 		notation.figureSymbol = figure->notationSymbol;
 		notation.move = chessboard.locateField(figure->pos)->indc;
+
+		if (castling != NO_CASTLING)
+			notation.castling = castling;
 
 		if (spcMv == PROMOTE) {
 			// confirm move after selecting new figure
@@ -464,7 +469,7 @@ void Game::acceptMove(Move moveToAccept) {
 	else if (currPlayer == B)
 		currPlayer = W;
 
-	// currPlayer in actions above is now opponent!
+	// currPlayer in actions below is now opponent!
 
 	if (currPlayer == B)
 		waitingForStockfishAnswer = true;
