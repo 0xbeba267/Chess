@@ -109,15 +109,10 @@ void Game::run() {
 
 void Game::initialize() {
 	// matrix which contains numbers representing figures and colors
-	int board[8][8] ={
-						-1, -2, -3, -4, -5, -3, -2, -1,
-						-6, -6, -6, -6, -6, -6,	-6, -6,
-						 0,  0,  0,  0,  0,  0,  0,  0,
-						 0,  0,  0,  0,  0,  0,  0,  0,
-						 0,  0,  0,  0,  0,  0,  0,  0,
-						 0,  0,  0,  0,  0,  0,  0,  0,
-						 6,  6,  6,  6,  6,  6,  6,  6,
-						 1,  2,  3,  4,  5,  3,  2,  1 };
+	int board[8][8] = { -1, -2, -3, -4, -5, -3, -2, -1, -6, -6, -6, -6, -6, -6,
+			-6, -6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 6, 6, 6, 6, 6, 6, 6, 1, 2, 3,
+			4, 5, 3, 2, 1 };
 	ChessColor currentColor;
 	for (int i = 0; i < 8; i++)
 		for (int j = 0; j < 8; j++) {
@@ -183,10 +178,6 @@ void Game::placeDraggedFigure() {
 bool Game::tryPlayMove(Figure *figure, ChessboardField* newField,
 		bool testMode) {
 
-	// for debug:
-	if (testMode)
-		int t;
-
 	// save backup of the chessboard
 	ChessboardWithPieces chessboardBackup = chessboard;
 
@@ -244,6 +235,7 @@ bool Game::tryPlayMove(Figure *figure, ChessboardField* newField,
 			for (int x = figure->oldPos.x;
 					x != newField->getBoardPos().x + dx / abs(dx);
 					x += dx / abs(dx)) {
+				// TODO aktualizuj status pola po drodze, po jest to potrzebne by spr. czy pion może tu bić
 				figure->pos.x = x;
 				if (isKingChecked(currPlayer))
 					legalMv = false;
@@ -314,6 +306,11 @@ bool Game::tryPlayMove(Figure *figure, ChessboardField* newField,
 		notation.figureSymbol = figure->notationSymbol;
 		notation.move = chessboard.locateField(figure->pos)->indc;
 
+		// color both old and new field of moved figure
+		rectForLastField_from.setPosition(
+				(chessboard.locateField(figure->oldPos))->getPosition());
+		rectForLastField_to.setPosition(newField->getPosition());
+
 		if (castling != NO_CASTLING)
 			notation.castling = castling;
 
@@ -329,12 +326,6 @@ bool Game::tryPlayMove(Figure *figure, ChessboardField* newField,
 			acceptMove(move);
 
 		}
-
-		// color both old and new field of moved figure
-		rectForLastField_from.setPosition(
-				(chessboard.locateField(figure->oldPos))->getPosition());
-		rectForLastField_to.setPosition(newField->getPosition());
-
 	} else {
 		// Uncorrect move (or test mode is on)
 		// back to previous chessboard setup
@@ -455,8 +446,12 @@ bool Game::isKingCheckmated(ChessColor color) {
 						// update pointer to the figure before each try
 						auto * f = chessboard.getFigureOnPos( { i, j });
 
-						if (tryPlayMove(f, &chessboard.field[ii][jj]), true)
-							return false;
+						if (f)
+							// check if move is pseudolegal
+							if (f->isMoveLegal(Vector2i{ii, jj}))
+								// then check if that move is legal using test mode
+								if (tryPlayMove(f, &chessboard.field[ii][jj], true))
+									return false;
 					}
 		}
 	return true;
