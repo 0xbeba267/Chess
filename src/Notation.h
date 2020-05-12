@@ -47,6 +47,9 @@ private:
 	// if yes write ":" between before destination field
 	bool captured;
 
+	// if yes write "e.p." at the end
+	bool en_passant;
+
 	// if there is, replace record by "O-O" or "O-O-O"
 	Castling castling;
 

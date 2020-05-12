@@ -2,13 +2,6 @@
 
 King::King(ChessColor color, sf::Vector2i pos, Chessboard* xboard) :
 		Figure(color, pos, xboard) {
-	if (color == W)
-		texture.loadFromFile(W_KING_PNG);
-	else if (color == B)
-		texture.loadFromFile(B_KING_PNG);
-
-	// set texture of sprite
-	setTexture(texture);
 
 	notationSymbol = 'K';
 	type = KING;
@@ -81,6 +74,14 @@ bool King::isMoveLegal(sf::Vector2i newPos, SpecialMove& special) {
 		return true;
 	} else
 		return false;
+}
+
+void King::setGraphics() {
+	if (color == W)
+		texture.loadFromFile(W_KING_PNG);
+	else
+		texture.loadFromFile(B_KING_PNG);
+	setTexture(texture);
 }
 
 King::~King() {

@@ -2,13 +2,6 @@
 
 Queen::Queen(ChessColor color, sf::Vector2i pos, Chessboard* xboard) :
 		Figure(color, pos, xboard) {
-	if (color == W)
-		texture.loadFromFile(W_QUEEN_PNG);
-	else if (color == B)
-		texture.loadFromFile(B_QUEEN_PNG);
-
-	// set texture of sprite
-	setTexture(texture);
 
 	notationSymbol = 'H';
 	type = QUEEN;
@@ -70,6 +63,14 @@ bool Queen::isMoveLegal(sf::Vector2i newPos, SpecialMove& special) {
 		return true;
 	} else
 		return false;
+}
+
+void Queen::setGraphics() {
+	if (color == W)
+		texture.loadFromFile(W_QUEEN_PNG);
+	else
+		texture.loadFromFile(B_QUEEN_PNG);
+	setTexture(texture);
 }
 
 Queen::~Queen() {

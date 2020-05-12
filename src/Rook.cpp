@@ -2,13 +2,6 @@
 
 Rook::Rook(ChessColor color, sf::Vector2i pos, Chessboard* xboard) :
 		Figure(color, pos, xboard) {
-	if (color == W)
-		texture.loadFromFile(W_ROOK_PNG);
-	else if (color == B)
-		texture.loadFromFile(B_ROOK_PNG);
-
-	// set texture of sprite
-	setTexture(texture);
 
 	notationSymbol = 'W';
 	type = ROOK;
@@ -58,6 +51,14 @@ bool Rook::isMoveLegal(sf::Vector2i newPos, SpecialMove& special) {
 		return true;
 	} else
 		return false;
+}
+
+void Rook::setGraphics() {
+	if (color == W)
+		texture.loadFromFile(W_ROOK_PNG);
+	else
+		texture.loadFromFile(B_ROOK_PNG);
+	setTexture(texture);
 }
 
 Rook::~Rook() {

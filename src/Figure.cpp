@@ -20,12 +20,9 @@ Figure::Figure(const Figure & old) {
 
 	setPosition(xboard->locateField(pos)->getPosition());
 
-	texture = old.texture;
-	setTexture(texture);
-
 	type = old.type;
 	color = old.color;
-	notationSymbol = old.notationSymbol ;
+	notationSymbol = old.notationSymbol;
 }
 
 Figure::~Figure() {

@@ -18,6 +18,7 @@ void Notation::prepareNextMove() {
 	castling = NO_CASTLING;
 	check = NO_CHECK;
 	promotingTo = "";
+	en_passant = false;
 }
 
 void Notation::sendOutput() {
@@ -50,6 +51,11 @@ void Notation::sendOutput() {
 		record += "+";
 	else if (check == CHECKMATE)
 		record += "#";
+
+	// add postfix in case of capture en passant
+	if (en_passant)
+		record += " e.p.";
+
 
 	// write number of current move with complete record of it
 	// also change the player

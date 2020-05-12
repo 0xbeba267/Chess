@@ -2,13 +2,6 @@
 
 Knight::Knight(ChessColor color, sf::Vector2i pos, Chessboard* xboard) :
 		Figure(color, pos, xboard) {
-	if (color == W)
-		texture.loadFromFile(W_KNIGHT_PNG);
-	else if (color == B)
-		texture.loadFromFile(B_KNIGHT_PNG);
-
-	// set texture of sprite
-	setTexture(texture);
 
 	notationSymbol = 'S';
 	type = KNIGHT;
@@ -33,6 +26,14 @@ bool Knight::isMoveLegal(sf::Vector2i newPos, SpecialMove& special) {
 		return true;
 	} else
 		return false;
+}
+
+void Knight::setGraphics() {
+	if (color == W)
+		texture.loadFromFile(W_KNIGHT_PNG);
+	else
+		texture.loadFromFile(B_KNIGHT_PNG);
+	setTexture(texture);
 }
 
 Knight::~Knight() {

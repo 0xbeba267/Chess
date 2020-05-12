@@ -10,6 +10,8 @@ public:
 
 	bool isMoveLegal(sf::Vector2i newPos, SpecialMove& special);
 
+	void setGraphics();
+
 	virtual ~King();
 };
 

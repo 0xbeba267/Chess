@@ -142,6 +142,9 @@ void Game::initialize() {
 				chessboard.figures.push_back(
 						new Pawn(currentColor, { j, i }, &chessboard));
 		}
+	// load graphics for pieces
+	for (auto f : chessboard.figures)
+		f->setGraphics();
 }
 
 void Game::tryClickOn(Figure &figure) {
@@ -173,6 +176,10 @@ void Game::placeDraggedFigure() {
 
 	// make figure no longer dragged
 	dragged = nullptr;
+
+	// reload graphics for pieces (chessboard could be reconstructed)
+	for (auto f : chessboard.figures)
+		f->setGraphics();
 }
 
 bool Game::tryPlayMove(Figure *figure, ChessboardField* newField,
@@ -219,6 +226,7 @@ bool Game::tryPlayMove(Figure *figure, ChessboardField* newField,
 		// do addicional actions when move is EN PASSANT
 		if (spcMv == EN_PASSANT) {
 			notation.captured = true;
+			notation.en_passant = true;
 			// clear status of field and remove last moved figure
 			for (auto * f : chessboard.figures)
 				if (f->pos
@@ -437,22 +445,18 @@ bool Game::isKingChecked(ChessColor color) {
 bool Game::isKingCheckmated(ChessColor color) {
 	// see if player, which king is checked has no legal move
 
-	// try to play move for figure from any field to any field
-	for (int i = 0; i < 8; i++)
-		for (int j = 0; j < 8; j++) {
-			if (chessboard.field[i][j].getStatus() == color)
-				for (int ii = 0; ii < 8; ii++)
-					for (int jj = 0; jj < 8; jj++) {
-						// update pointer to the figure before each try
-						auto * f = chessboard.getFigureOnPos( { i, j });
-
-						if (f)
-							// check if move is pseudolegal
-							if (f->isMoveLegal(Vector2i{ii, jj}))
-								// then check if that move is legal using test mode
-								if (tryPlayMove(f, &chessboard.field[ii][jj], true))
-									return false;
-					}
+	// try to play move any figure on any field
+	for (int ii = 0; ii < 8; ii++)
+		for (int jj = 0; jj < 8; jj++) {
+			for (auto * f : chessboard.figures) {
+				// figure color must same as king's owner
+				if (f->color == color)
+					// check if move is pseudolegal first
+					if (f->isMoveLegal(Vector2i { ii, jj }))
+						// then check if that move is legal using test mode
+						if (tryPlayMove(f, &chessboard.field[ii][jj], true))
+							return false;
+			}
 		}
 	return true;
 }
@@ -480,6 +484,10 @@ void Game::acceptMove(Move moveToAccept) {
 	}
 	chessboard.moves.push_back(moveToAccept);
 	notation.sendOutput();
+
+	// reload graphics for pieces (chessboard could be reconstructed)
+	for (auto * f : chessboard.figures)
+		f->setGraphics();
 }
 
 bool Game::initAI() {

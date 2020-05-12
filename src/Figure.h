@@ -88,6 +88,13 @@ public:
 	virtual bool isMoveLegal(sf::Vector2i pos, SpecialMove & special =
 			notCheckingSpecial) = 0;
 
+	/**
+	 * Function which automatically load right texture
+	 * depending on figure type. Be sure that function
+	 * is called at least once before drawing this figure!
+	 */
+	virtual void setGraphics() = 0;
+
 	virtual ~Figure();
 protected:
 	// pointer to the chessboard used for information about fields' occupiers
@@ -103,7 +110,7 @@ protected:
 	// what figure it is (PAWN, KING, ROOK etc.)
 	FigureType type;
 
-	// used by inherited figures to draw them
+	// graphics
 	sf::Texture texture;
 
 	// symbol of figure (for pawn its "")

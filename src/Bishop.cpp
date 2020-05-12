@@ -2,13 +2,6 @@
 
 Bishop::Bishop(ChessColor color, sf::Vector2i pos, Chessboard* xboard) :
 		Figure(color, pos, xboard) {
-	if (color == W)
-		texture.loadFromFile(W_BISHOP_PNG);
-	else if (color == B)
-		texture.loadFromFile(B_BISHOP_PNG);
-
-	// set texture of sprite
-	setTexture(texture);
 
 	notationSymbol = 'G';
 	type = BISHOP;
@@ -42,6 +35,14 @@ bool Bishop::isMoveLegal(sf::Vector2i newPos, SpecialMove& special) {
 			return false;
 		return true;
 	}
+}
+
+void Bishop::setGraphics() {
+	if (color == W)
+		texture.loadFromFile(W_BISHOP_PNG);
+	else
+		texture.loadFromFile(B_BISHOP_PNG);
+	setTexture(texture);
 }
 
 Bishop::~Bishop() {

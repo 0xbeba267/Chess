@@ -2,13 +2,6 @@
 
 Pawn::Pawn(ChessColor color, sf::Vector2i pos, Chessboard* xboard) :
 		Figure(color, pos, xboard) {
-	if (color == W)
-		texture.loadFromFile(W_PAWN_PNG);
-	else if (color == B)
-		texture.loadFromFile(B_PAWN_PNG);
-
-	// set texture of sprite
-	setTexture(texture);
 
 	notationSymbol = "";
 	type = PAWN;
@@ -99,6 +92,14 @@ bool Pawn::isMoveLegal(sf::Vector2i newPos, SpecialMove& special) {
 		}
 	}
 	return false;
+}
+
+void Pawn::setGraphics() {
+	if (color == W)
+		texture.loadFromFile(W_PAWN_PNG);
+	else
+		texture.loadFromFile(B_PAWN_PNG);
+	setTexture(texture);
 }
 
 Pawn::~Pawn() {
