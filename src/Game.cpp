@@ -99,6 +99,7 @@ void Game::run() {
 
 		window.display();
 
+//		vsAI = false; // todo wylacz to
 		// let stockfish play next move
 		if (vsAI)
 			if (waitingForStockfishAnswer)
@@ -213,11 +214,13 @@ bool Game::tryPlayMove(Figure *figure, ChessboardField* newField,
 				// ...then remove beated figure
 				if (f->pos == newField->getBoardPos()) {
 					chessboard.deleteFigure(f);
-					notation.captured = true;
+					if (!testMode)
+						notation.captured = true;
 					// if pawn captured figure, send his column to the notation
 					if (figure->type == PAWN)
-						notation.starting_field = chessboard.locateField(
-								figure->pos)->indc[0];
+						if (!testMode)
+							notation.starting_field = chessboard.locateField(
+									figure->pos)->indc[0];
 					break;
 				}
 			}
@@ -225,8 +228,10 @@ bool Game::tryPlayMove(Figure *figure, ChessboardField* newField,
 
 		// do addicional actions when move is EN PASSANT
 		if (spcMv == EN_PASSANT) {
-			notation.captured = true;
-			notation.en_passant = true;
+			if (!testMode) {
+				notation.captured = true;
+				notation.en_passant = true;
+			}
 			// clear status of field and remove last moved figure
 			for (auto * f : chessboard.figures)
 				if (f->pos
@@ -276,24 +281,25 @@ bool Game::tryPlayMove(Figure *figure, ChessboardField* newField,
 
 		// disambiguating moves for notation
 		// try to find other figure of same type moving on same field
-		for (auto * f : chessboard.figures)
-			if (f->type == figure->type && f != figure
-					&& f->color == figure->color
-					&& f->isMoveLegal(newField->getBoardPos()))
-				if (f->pos.x != figure->pos.x) {
-					// add column of moved figure
-					notation.starting_field = chessboard.locateField(
-							figure->pos)->indc[0];
-				} else if (f->pos.y != figure->pos.y) {
-					// add row of moved figure
-					notation.starting_field = chessboard.locateField(
-							figure->pos)->indc[1];
+		if (!testMode)
+			for (auto * f : chessboard.figures)
+				if (f->type == figure->type && f != figure
+						&& f->color == figure->color
+						&& f->isMoveLegal(newField->getBoardPos()))
+					if (f->pos.x != figure->pos.x) {
+						// add column of moved figure
+						notation.starting_field = chessboard.locateField(
+								figure->pos)->indc[0];
+					} else if (f->pos.y != figure->pos.y) {
+						// add row of moved figure
+						notation.starting_field = chessboard.locateField(
+								figure->pos)->indc[1];
 //					TODO when player have 3 same figures, need to check all of them at once
 //					} else {
 //						// add column and row of moved figure
 //						startingFieldPrefix = chessboard.locateField(
 //								figure.field)->indc;
-				}
+					}
 
 		// place figure on the new field
 		chessboard.moveFigureOnField(figure, newField);
