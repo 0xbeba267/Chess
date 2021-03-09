@@ -3,7 +3,11 @@
 Bishop::Bishop(ChessColor color, sf::Vector2i pos, Chessboard* xboard) :
 		Figure(color, pos, xboard) {
 
-	notationSymbol = 'G';
+	if (lang == EN)
+		notationSymbol = 'B';
+	else if (lang == PL)
+		notationSymbol = 'G';
+
 	type = BISHOP;
 }
 

@@ -43,6 +43,7 @@ private:
 	std::string move;
 	std::string starting_field;
 	std::string promotingTo;
+	std::string captureSymbol;
 
 	// if yes write ":" between before destination field
 	bool captured;

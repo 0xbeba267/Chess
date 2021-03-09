@@ -68,6 +68,7 @@ ChessboardWithPieces & ChessboardWithPieces::operator=(
 	}
 
 	font = oldChessboard.font;
+
 	return *this;
 }
 

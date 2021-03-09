@@ -1,11 +1,18 @@
 #ifndef GLOBAL_H_
 #define GLOBAL_H_
 
-#include <SFML/Graphics.hpp>
-#include <memory>
+#include <SFML/Graphics.hpp>	//  todo przenieś to jeśli masz klasy abstrakcyjne (w sensie bez grafiki)
 
-// global-known window of program, definition in main.cpp
-extern sf::RenderWindow window;
+enum Lang {
+	PL,
+	EN,
+};
+
+extern Lang lang;
+
+
+#define INPUT_END 0		// INPUT_END means where the pipe takes input
+#define OUTPUT_END 1	// OUTPUT_END means where the pipe produces output
 
 // number of pixels in width and height per one chessboard field
 const float FIELD_SIZE = 60;
@@ -26,7 +33,6 @@ const float FIELD_SIZE = 60;
 
 #define FONT_REGULAR "fonts/tahoma.ttf"
 
-//
 enum FigureType {
 	PAWN,
 	ROOK,

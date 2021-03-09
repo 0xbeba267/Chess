@@ -4,6 +4,7 @@ Pawn::Pawn(ChessColor color, sf::Vector2i pos, Chessboard* xboard) :
 		Figure(color, pos, xboard) {
 
 	notationSymbol = "";
+
 	type = PAWN;
 }
 

@@ -7,6 +7,11 @@ Notation::Notation() {
 	currPlayer = W;
 	turn = 1;
 	prepareNextMove();
+
+	if (lang == EN)
+		captureSymbol = 'x';
+	else if (lang == PL)
+		captureSymbol = ':';
 }
 
 void Notation::prepareNextMove() {
@@ -24,20 +29,20 @@ void Notation::prepareNextMove() {
 void Notation::sendOutput() {
 	string record;
 
-	// add symbol of figure (always used)
+	// add symbol of figure
 	record += figureSymbol;
 
-	// add starting field (when needed)
+	// add starting field
 	record += starting_field;
 
-	// add symbol of capturing (when needed)
+	// add symbol of capturing
 	if (captured)
-		record += ":";
+		record += captureSymbol;
 
-	// add destination field (always used)
+	// add destination field
 	record += move;
 
-	// add promoted figure symbol (when needed)
+	// add promoted figure symbol
 	record += promotingTo;
 
 	// castling replace whole record about move
@@ -46,30 +51,27 @@ void Notation::sendOutput() {
 	else if (castling == LONG_CASTLING)
 		record = "O-O-O";
 
-	// add checking postfix if check is detected
+	// if there was capture en passant
+	if (en_passant)
+		record += " e.p.";
+
+	// write check/checkmate symbol
 	if (check == CHECK)
 		record += "+";
 	else if (check == CHECKMATE)
 		record += "#";
 
-	// add postfix in case of capture en passant
-	if (en_passant)
-		record += " e.p.";
-
-
-	// write number of current move with complete record of it
-	// also change the player
+	// write last move on standard output then switch current player (within this class only)
 	if (currPlayer == W) {
 		cout << turn << ". " << record << " ";
 		currPlayer = B;
-		if (check == CHECKMATE)
-			cout << endl;
-
 	} else {
 		cout << record << endl;
 		currPlayer = W;
 		turn++;
 	}
+
+	fflush(stdout);
 
 	// after writing output, clear all data for next move
 	prepareNextMove();

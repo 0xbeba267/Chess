@@ -3,7 +3,11 @@
 Rook::Rook(ChessColor color, sf::Vector2i pos, Chessboard* xboard) :
 		Figure(color, pos, xboard) {
 
-	notationSymbol = 'W';
+	if (lang == EN)
+		notationSymbol = 'R';
+	else if (lang == PL)
+		notationSymbol = 'W';
+
 	type = ROOK;
 }
 

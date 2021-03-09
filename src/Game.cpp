@@ -3,8 +3,29 @@
 using namespace sf;
 using namespace std;
 
+std::string exec_test(const char* cmd, int line_start = 0, int line_n = 1) {
+	array<char, 128> buffer;
+	string result;
+
+	FILE *pipe_fp;
+	if ((pipe_fp = popen(cmd, "r")) == NULL)
+		throw std::runtime_error("popen() failed!");
+
+	int line = 0;
+	while (fgets(buffer.data(), buffer.size(), pipe_fp) != nullptr) {
+		// save output starting from specified line until gets specified numbers of lines
+		if (line >= line_start && line <= line_start + line_n)
+			result += buffer.data();
+		line++;
+	}
+	pclose(pipe_fp);
+
+	return result;
+}
+
 Game::Game() :
-		chessboard(200, 80) {
+		window(VideoMode(910, 670), "Chess", Style::Titlebar | Style::Close), chessboard(
+				200, 80) {
 	currPlayer = W;
 
 	rectForLastField_from.setFillColor(sf::Color { 255, 255, 0, 48 });
@@ -22,9 +43,9 @@ void Game::run() {
 	gameState = PLAYING;
 
 	// turn vs computer mode if stockfish detected
-	if (initAI())
+	if (testAI()) {
 		vsAI = true;
-	else {
+	} else {
 		vsAI = false;
 		cout << "Can't find stockfish. AI is off.\n";
 	}
@@ -99,7 +120,6 @@ void Game::run() {
 
 		window.display();
 
-//		vsAI = false; // todo wylacz to
 		// let stockfish play next move
 		if (vsAI)
 			if (waitingForStockfishAnswer)
@@ -109,7 +129,7 @@ void Game::run() {
 }
 
 void Game::initialize() {
-	// matrix which contains numbers representing figures and colors
+	// matrix which contains numbers representing figures and thier colors
 	int board[8][8] = { -1, -2, -3, -4, -5, -3, -2, -1, -6, -6, -6, -6, -6, -6,
 			-6, -6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 6, 6, 6, 6, 6, 6, 6, 1, 2, 3,
@@ -143,7 +163,7 @@ void Game::initialize() {
 				chessboard.figures.push_back(
 						new Pawn(currentColor, { j, i }, &chessboard));
 		}
-	// load graphics for pieces
+	// load graphics for each figure
 	for (auto f : chessboard.figures)
 		f->setGraphics();
 }
@@ -474,8 +494,9 @@ void Game::acceptMove(Move moveToAccept) {
 	else if (currPlayer == B)
 		currPlayer = W;
 
-	// currPlayer in actions below is now opponent!
+	// ! currPlayer in actions below is now opponent !
 
+	// todo wyjeb to i zrobp orzadne sprawdzanie potem, bo tu nie mozna wewnatrz accept move
 	if (currPlayer == B)
 		waitingForStockfishAnswer = true;
 
@@ -496,24 +517,13 @@ void Game::acceptMove(Move moveToAccept) {
 		f->setGraphics();
 }
 
-bool Game::initAI() {
-	// 1) Run stockfish with isready parameter
-	system("stockfish isready > output.tmp");
-	// 2) Read the output of stockfish
-	std::string outputMsg;
-	outputFile.open("output.tmp", std::ios::in);
-	std::string s;
-	int line = 0;
-	while (!outputFile.eof()) {
-		getline(outputFile, s);
-		if (line == 1)
-			outputMsg = s;
-		line++;
-	}
-	// 3) If asnswer is same as expected return true
-	outputFile.close();
+bool Game::testAI() {
+	// 1) Run stockfish with "isready" parameter and get line number 1 from output
+	std::string output = exec_test("stockfish isready", 1);
+
+	// 2) If asnswer is "readyok" means chess engine is ready to work
 	string expected_answer = "readyok";
-	string answer = outputMsg.substr(0, expected_answer.length());
+	string answer = output.substr(0, expected_answer.length());
 	if (answer == expected_answer)
 		return true;
 	else
@@ -521,76 +531,151 @@ bool Game::initAI() {
 }
 
 void Game::letEngineMove() {
-	// redirection board setup as input for stockfish program
-	// then redirection output to text file and read it to get answer
 
-	// 1) Send information about last move
-	inputFile.open("input.tmp", std::ios::out);
-	inputFile << "position startpos moves ";
-	for (auto m : chessboard.moves) {
-		std::string promoInfo = "";
-		if (m.figure != m.newFigure)
-			switch (m.newFigure) {
-			case ROOK:
-				promoInfo = "r";
-				break;
-			case KNIGHT:
-				promoInfo = "n";
-				break;
-			case BISHOP:
-				promoInfo = "b";
-				break;
-			case QUEEN:
-				promoInfo = "q";
-				break;
+	int fd1[2], fd2[2];
+
+	pid_t pid;
+	if (pipe(fd1) == -1) {
+		std::cerr << "Error while creating a pipe.\n";
+		exit(1);
+	}
+
+	if (pipe(fd2) == -1) {
+		std::cerr << "Error while creating a pipe.\n";
+		exit(1);
+	}
+
+	switch (int pid = fork()) { /* Create a child process */
+		case -1: {
+			perror("fork for rev_child");
+		}
+		break;
+		case 0: /* Child */
+		{
+			// save backup of stdin
+			int default_input = dup(STDIN_FILENO);
+
+			// replace stdin by input from first pipe
+			dup2(fd1[INPUT_END], STDIN_FILENO);
+
+			const char* cmd = "stockfish";
+
+			FILE *pipe_fp;
+			if (( pipe_fp = popen(cmd, "r")) == NULL)
+			throw std::runtime_error("popen() failed!");
+
+			std::array<char, 80> buffer;
+
+			while (fgets(buffer.data(), buffer.size(), pipe_fp) != nullptr) {
+				if (strncmp("bestmove", buffer.data(), 8) == 0) {
+					// read output buffor continuously until not see 'bestmove'
+					// write answer into second pipeline which goes to the parent
+					close(fd2[INPUT_END]);
+					write(fd2[OUTPUT_END], &buffer, strlen(buffer.data()) );
+					close(fd2[OUTPUT_END]);
+
+					const char* polecenie_quit = "quit\n";
+
+					// write 'quit' to first pipe (which replaced stdin)
+					write(fd1[OUTPUT_END], polecenie_quit, strlen(polecenie_quit));
+					close(fd1[OUTPUT_END]);
+
+					pclose(pipe_fp);
+
+					break;
+				}
 			}
-		inputFile << chessboard.locateField(m.fromPos)->indc
+			// restore stdin
+			dup2(default_input, STDIN_FILENO);
+
+			close(fd1[OUTPUT_END]);
+			close(fd1[INPUT_END]);
+			close(fd2[OUTPUT_END]);
+			close(fd2[INPUT_END]);
+
+			exit(0);				// end child process here
+		}
+		break;
+		default: /* Parent */
+		{
+			close(fd1[INPUT_END]);
+
+			// 1) Send information about last move
+			ostringstream input;
+			input << "position startpos moves ";
+			for (auto m : chessboard.moves) {
+				string promoInfo = "";
+				if (m.figure != m.newFigure)
+				switch (m.newFigure) {
+					case ROOK:
+					promoInfo = "r";
+					break;
+					case KNIGHT:
+					promoInfo = "n";
+					break;
+					case BISHOP:
+					promoInfo = "b";
+					break;
+					case QUEEN:
+					promoInfo = "q";
+					break;
+				}
+				input << chessboard.locateField(m.fromPos)->indc
 				<< chessboard.locateField(m.toPos)->indc << promoInfo << " ";
-	}
-	inputFile << "\ngo movetime 100\n";
-	inputFile.close();
-	system("stockfish < input.tmp > output.tmp");
+			}
+			input << "\ngo movetime 100\n";
 
-	// 2) Read the output of stockfish
-	std::string outputMsg;
-	outputFile.open("output.tmp", std::ios::in);
-	std::string s;
-	int line = 0;
-	while (!outputFile.eof()) {
-		getline(outputFile, s);
-		if (line == 1)
-			outputMsg = s;
-		line++;
-	}
-	outputFile.close();
+			// send data on through pipe to child process
+			write(fd1[OUTPUT_END], input.str().c_str(), strlen( input.str().c_str()));
 
-	// TODO try decode 3 characters from second move to make promotion automatically
-	// 3) Decode output to get the best move as indication
-	string moveFromIndc = outputMsg.substr(9, 2);
-	string moveToIndc = outputMsg.substr(11, 2);
+			wait(0);// run child process
 
-	Figure* movingFigure = nullptr;
-	ChessboardField* newField = nullptr;
-	// locate figure on starting field
-	for (int i = 0; i < 8; i++)
-		for (int j = 0; j < 8; j++) {
-			if (chessboard.field[i][j].indc == moveFromIndc)
+			close(fd2[OUTPUT_END]);
+
+			std::string output;
+			char buf;
+
+			// receive answer sent by child process through pipeline
+			while (read(fd2[INPUT_END], &buf, 1) > 0) {
+				output += buf;
+			}
+
+			close(fd1[INPUT_END]);
+			close(fd1[OUTPUT_END]);
+			close(fd2[OUTPUT_END]);
+			close(fd2[INPUT_END]);
+
+			// TODO try decode 3 characters from second move to make promotion automatically
+			// 3) Decode output to get the best move as indication
+			string moveFromIndc = output.substr(9, 2);
+			string moveToIndc = output.substr(11, 2);
+
+			Figure* movingFigure = nullptr;
+			ChessboardField* newField = nullptr;
+			// locate figure on starting field
+			for (int i = 0; i < 8; i++)
+			for (int j = 0; j < 8; j++) {
+				if (chessboard.field[i][j].indc == moveFromIndc)
 				movingFigure = chessboard.getFigureOnPos(
 						chessboard.field[i][j].getBoardPos());
-		}
-	// find new field on the chessboard
-	for (int i = 0; i < 8; i++)
-		for (int j = 0; j < 8; j++) {
-			if (chessboard.field[i][j].indc == moveToIndc)
+			}
+			// find new field on the chessboard
+			for (int i = 0; i < 8; i++)
+			for (int j = 0; j < 8; j++) {
+				if (chessboard.field[i][j].indc == moveToIndc)
 				newField = &chessboard.field[i][j];
+			}
+
+			if (movingFigure && newField)
+			tryPlayMove(movingFigure, newField);
+
+			waitingForStockfishAnswer = false;
 		}
-
-	if (movingFigure && newField)
-		tryPlayMove(movingFigure, newField);
-
-	waitingForStockfishAnswer = false;
+		break;
+	}
 
 }
+
 
 Game::~Game() {
 

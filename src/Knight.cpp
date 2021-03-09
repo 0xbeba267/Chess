@@ -3,7 +3,11 @@
 Knight::Knight(ChessColor color, sf::Vector2i pos, Chessboard* xboard) :
 		Figure(color, pos, xboard) {
 
-	notationSymbol = 'S';
+	if (lang == EN)
+		notationSymbol = 'N';
+	else if (lang == PL)
+		notationSymbol = 'S';
+
 	type = KNIGHT;
 }
 

@@ -3,7 +3,11 @@
 Queen::Queen(ChessColor color, sf::Vector2i pos, Chessboard* xboard) :
 		Figure(color, pos, xboard) {
 
-	notationSymbol = 'H';
+	if (lang == EN)
+		notationSymbol = 'Q';
+	else if (lang == PL)
+		notationSymbol = 'H';
+
 	type = QUEEN;
 }
 

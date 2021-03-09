@@ -3,7 +3,11 @@
 King::King(ChessColor color, sf::Vector2i pos, Chessboard* xboard) :
 		Figure(color, pos, xboard) {
 
-	notationSymbol = 'K';
+	if (lang == EN)
+		notationSymbol = 'K';
+	else if (lang == PL)
+		notationSymbol = 'K';
+
 	type = KING;
 }
 

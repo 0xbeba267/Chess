@@ -42,9 +42,13 @@
 #include "Pawn.h"
 
 #include <iostream>
+#include <array>
 #include <fstream>
+#include <string.h>
 #include <cmath>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 enum GameState {
 	PLAYING,	///< regular play, current player can move
@@ -97,6 +101,9 @@ public:
 
 	virtual ~Game();
 private:
+	// main window of program
+	sf::RenderWindow window;
+
 	GameState gameState;
 
 	ChessboardWithPieces chessboard;
@@ -124,7 +131,7 @@ private:
 
 	/****************** Communication with stockfish ******************/
 	// check if connection with stockfish is fine
-	bool initAI();
+	bool testAI();
 
 	// if yes, AI will make move in the next iteration of game loop
 	bool waitingForStockfishAnswer;
