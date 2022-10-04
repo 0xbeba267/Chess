@@ -131,7 +131,7 @@ private:
 
 	/****************** Communication with stockfish ******************/
 	// check if connection with stockfish is fine
-	bool testAI();
+	bool testConnector();
 
 	// if yes, AI will make move in the next iteration of game loop
 	bool waitingForStockfishAnswer;

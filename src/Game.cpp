@@ -3,7 +3,7 @@
 using namespace sf;
 using namespace std;
 
-std::string exec_test(const char* cmd, int line_start = 0, int line_n = 1) {
+std::string exec_test(const char* cmd) {
 	array<char, 128> buffer;
 	string result;
 
@@ -13,10 +13,7 @@ std::string exec_test(const char* cmd, int line_start = 0, int line_n = 1) {
 
 	int line = 0;
 	while (fgets(buffer.data(), buffer.size(), pipe_fp) != nullptr) {
-		// save output starting from specified line until gets specified numbers of lines
-		if (line >= line_start && line <= line_start + line_n)
-			result += buffer.data();
-		line++;
+		result += buffer.data();
 	}
 	pclose(pipe_fp);
 
@@ -42,8 +39,8 @@ void Game::run() {
 	initialize();
 	gameState = PLAYING;
 
-	// turn vs computer mode if stockfish detected
-	if (testAI()) {
+	// turn vs computer mode if connector to stockfish works correctly
+	if (testConnector()) {
 		vsAI = true;
 	} else {
 		vsAI = false;
@@ -517,9 +514,9 @@ void Game::acceptMove(Move moveToAccept) {
 		f->setGraphics();
 }
 
-bool Game::testAI() {
+bool Game::testConnector() {
 	// 1) Run stockfish with "isready" parameter and get line number 1 from output
-	std::string output = exec_test("stockfish isready", 1);
+	std::string output = exec_test("./connector.out isready", 1);
 
 	// 2) If asnswer is "readyok" means chess engine is ready to work
 	string expected_answer = "readyok";
@@ -528,6 +525,8 @@ bool Game::testAI() {
 		return true;
 	else
 		return false;
+
+		cout<< "Answer: " << output;
 }
 
 void Game::letEngineMove() {

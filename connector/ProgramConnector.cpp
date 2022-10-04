@@ -13,6 +13,13 @@ using namespace std;
 #define OUTPUT_END 1	// OUTPUT_END means where the pipe produces output
 
 int main(int argc, char* argv[]) {
+	if (argc == 0) {
+		cerr << "Error: Program connector need an argument.\n";
+		exit(1);
+	}
+
+	// if program has run with argument "isready" 
+	bool isready_test = (strcmp("isready", argv[1]) ? 0 : 1);
 
     int fd1[2], fd2[2];
 
@@ -49,6 +56,25 @@ int main(int argc, char* argv[]) {
 			std::array<char, 80> buffer;
 
 			while (fgets(buffer.data(), buffer.size(), pipe_fp) != nullptr) {
+
+					if (strncmp("readyok", buffer.data(), 7) == 0) {
+						//(strncmp("readyok", buffer.data(), 8) == 0) 
+						close(fd2[INPUT_END]);
+						write(fd2[OUTPUT_END], &buffer, strlen(buffer.data()) );
+						close(fd2[OUTPUT_END]);
+
+						const char* polecenie_quit = "quit\n";
+
+						// write 'quit' to first pipe (which is connected to stdin)
+						write(fd1[OUTPUT_END], polecenie_quit, strlen(polecenie_quit));
+						close(fd1[OUTPUT_END]);
+
+						pclose(pipe_fp);
+
+						break;
+					}
+				
+				else 
 				if (strncmp("bestmove", buffer.data(), 8) == 0) {
 					// read output buffor continuously until not see 'bestmove'
 					// write answer into second pipeline which goes to the parent
@@ -82,13 +108,20 @@ int main(int argc, char* argv[]) {
 		{
 			close(fd1[INPUT_END]);
 
-			// 1) Send information about last move
 			ostringstream input;
-			input << "position startpos moves ";
 
-            input << argv[1];
-            
-			input << "\ngo movetime 100\n";
+			// isready test detected - set input to "isready"
+			if (isready_test) {
+				input << "isready\n";
+			}
+			else
+			{
+			// send information about last move
+				input << "position startpos moves ";
+            	input << argv[1];
+				input << "\ngo movetime 100\n";
+			}
+			
 
 			// send data on through pipe to child process
 			write(fd1[OUTPUT_END], input.str().c_str(), strlen( input.str().c_str()));
@@ -110,13 +143,19 @@ int main(int argc, char* argv[]) {
 			close(fd2[OUTPUT_END]);
 			close(fd2[INPUT_END]);
 
+			// isready test detected - print output (which should be "readyok")
+			if (isready_test) {
+				cout << output;
+			}
+			else
 			// TODO try decode 3 characters from second move to make promotion automatically
 			// 3) Decode output to get the best move as indication
-			string moveFromIndc = output.substr(9, 2);
-			string moveToIndc = output.substr(11, 2);
+			{	
+				string moveFromIndc = output.substr(9, 2);
+				string moveToIndc = output.substr(11, 2);
 
-            cout << "bestmove " << moveFromIndc << moveToIndc << endl;
-
+				cout << "bestmove " << moveFromIndc << moveToIndc << endl;
+			}
         } /* Parent */
     } /* switch (int pid = fork()) */
 
