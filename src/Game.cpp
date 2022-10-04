@@ -531,151 +531,78 @@ bool Game::testAI() {
 }
 
 void Game::letEngineMove() {
-
-	int fd1[2], fd2[2];
-
-	pid_t pid;
-	if (pipe(fd1) == -1) {
-		std::cerr << "Error while creating a pipe.\n";
-		exit(1);
+	string moves_as_string;
+	for (auto m : chessboard.moves) {
+		string promoInfo = "";
+		if (m.figure != m.newFigure)
+		switch (m.newFigure) {
+			case ROOK:
+			promoInfo = "r";
+			break;
+			case KNIGHT:
+			promoInfo = "n";
+			break;
+			case BISHOP:
+			promoInfo = "b";
+			break;
+			case QUEEN:
+			promoInfo = "q";
+			break;
+		}
+		moves_as_string += chessboard.locateField(m.fromPos)->indc
+		+ chessboard.locateField(m.toPos)->indc + promoInfo + " ";
 	}
 
-	if (pipe(fd2) == -1) {
-		std::cerr << "Error while creating a pipe.\n";
-		exit(1);
+	const char* run_cmd = "./connector.out";
+
+	string cmd = run_cmd;
+	cmd += " \"" + moves_as_string + "\"";
+
+	FILE *pipe_fp;
+	if (( pipe_fp = popen(cmd.c_str(), "r")) == NULL)
+	throw std::runtime_error("popen() failed!");
+
+	std::array<char, 80> buffer;
+
+	std::string output;	// output line with bestmove from ProgramConnector.out
+
+	while (fgets(buffer.data(), buffer.size(), pipe_fp) != nullptr) {
+		if (strncmp("bestmove", buffer.data(), 8) == 0) {
+			output += buffer.data();
+
+			pclose(pipe_fp);
+			break;
+		}
 	}
 
-	switch (int pid = fork()) { /* Create a child process */
-		case -1: {
-			perror("fork for rev_child");
-		}
-		break;
-		case 0: /* Child */
-		{
-			// save backup of stdin
-			int default_input = dup(STDIN_FILENO);
+	//cout << "`" << output << "`" << endl;
 
-			// replace stdin by input from first pipe
-			dup2(fd1[INPUT_END], STDIN_FILENO);
+	// TODO try decode 3 characters from second move to make promotion automatically
+	// decode output to get the best move as indication
+	string moveFromIndc = output.substr(9, 2);
+	string moveToIndc = output.substr(11, 2);
 
-			const char* cmd = "stockfish";
-
-			FILE *pipe_fp;
-			if (( pipe_fp = popen(cmd, "r")) == NULL)
-			throw std::runtime_error("popen() failed!");
-
-			std::array<char, 80> buffer;
-
-			while (fgets(buffer.data(), buffer.size(), pipe_fp) != nullptr) {
-				if (strncmp("bestmove", buffer.data(), 8) == 0) {
-					// read output buffor continuously until not see 'bestmove'
-					// write answer into second pipeline which goes to the parent
-					close(fd2[INPUT_END]);
-					write(fd2[OUTPUT_END], &buffer, strlen(buffer.data()) );
-					close(fd2[OUTPUT_END]);
-
-					const char* polecenie_quit = "quit\n";
-
-					// write 'quit' to first pipe (which replaced stdin)
-					write(fd1[OUTPUT_END], polecenie_quit, strlen(polecenie_quit));
-					close(fd1[OUTPUT_END]);
-
-					pclose(pipe_fp);
-
-					break;
-				}
-			}
-			// restore stdin
-			dup2(default_input, STDIN_FILENO);
-
-			close(fd1[OUTPUT_END]);
-			close(fd1[INPUT_END]);
-			close(fd2[OUTPUT_END]);
-			close(fd2[INPUT_END]);
-
-			exit(0);				// end child process here
-		}
-		break;
-		default: /* Parent */
-		{
-			close(fd1[INPUT_END]);
-
-			// 1) Send information about last move
-			ostringstream input;
-			input << "position startpos moves ";
-			for (auto m : chessboard.moves) {
-				string promoInfo = "";
-				if (m.figure != m.newFigure)
-				switch (m.newFigure) {
-					case ROOK:
-					promoInfo = "r";
-					break;
-					case KNIGHT:
-					promoInfo = "n";
-					break;
-					case BISHOP:
-					promoInfo = "b";
-					break;
-					case QUEEN:
-					promoInfo = "q";
-					break;
-				}
-				input << chessboard.locateField(m.fromPos)->indc
-				<< chessboard.locateField(m.toPos)->indc << promoInfo << " ";
-			}
-			input << "\ngo movetime 100\n";
-
-			// send data on through pipe to child process
-			write(fd1[OUTPUT_END], input.str().c_str(), strlen( input.str().c_str()));
-
-			wait(0);// run child process
-
-			close(fd2[OUTPUT_END]);
-
-			std::string output;
-			char buf;
-
-			// receive answer sent by child process through pipeline
-			while (read(fd2[INPUT_END], &buf, 1) > 0) {
-				output += buf;
-			}
-
-			close(fd1[INPUT_END]);
-			close(fd1[OUTPUT_END]);
-			close(fd2[OUTPUT_END]);
-			close(fd2[INPUT_END]);
-
-			// TODO try decode 3 characters from second move to make promotion automatically
-			// 3) Decode output to get the best move as indication
-			string moveFromIndc = output.substr(9, 2);
-			string moveToIndc = output.substr(11, 2);
-
-			Figure* movingFigure = nullptr;
-			ChessboardField* newField = nullptr;
-			// locate figure on starting field
-			for (int i = 0; i < 8; i++)
-			for (int j = 0; j < 8; j++) {
-				if (chessboard.field[i][j].indc == moveFromIndc)
-				movingFigure = chessboard.getFigureOnPos(
-						chessboard.field[i][j].getBoardPos());
-			}
-			// find new field on the chessboard
-			for (int i = 0; i < 8; i++)
-			for (int j = 0; j < 8; j++) {
-				if (chessboard.field[i][j].indc == moveToIndc)
-				newField = &chessboard.field[i][j];
-			}
-
-			if (movingFigure && newField)
-			tryPlayMove(movingFigure, newField);
-
-			waitingForStockfishAnswer = false;
-		}
-		break;
+	Figure* movingFigure = nullptr;
+	ChessboardField* newField = nullptr;
+	// locate figure on starting field
+	for (int i = 0; i < 8; i++)
+	for (int j = 0; j < 8; j++) {
+		if (chessboard.field[i][j].indc == moveFromIndc)
+		movingFigure = chessboard.getFigureOnPos(
+				chessboard.field[i][j].getBoardPos());
+	}
+	// find new field on the chessboard
+	for (int i = 0; i < 8; i++)
+	for (int j = 0; j < 8; j++) {
+		if (chessboard.field[i][j].indc == moveToIndc)
+		newField = &chessboard.field[i][j];
 	}
 
+	if (movingFigure && newField)
+	tryPlayMove(movingFigure, newField);
+
+	waitingForStockfishAnswer = false;
 }
-
 
 Game::~Game() {
 

@@ -13,6 +13,7 @@ To get source code and compile the project type:
 ```cd Chess```
 
 ```g++ -o Chess src/*.cpp -std=c++11 -lsfml-graphics -lsfml-window -lsfml-system```
+```g++ -o Chess connector/*.cpp -std=c++11```
 
 If compiled sucessfully, type
 ```./Chess```
