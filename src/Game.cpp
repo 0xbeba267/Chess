@@ -3,7 +3,8 @@
 using namespace sf;
 using namespace std;
 
-std::string exec_test(const char* cmd) {
+// non-class function used to return stdout from popened program
+std::string readoutput(const char* cmd) {
 	array<char, 128> buffer;
 	string result;
 
@@ -11,7 +12,7 @@ std::string exec_test(const char* cmd) {
 	if ((pipe_fp = popen(cmd, "r")) == NULL)
 		throw std::runtime_error("popen() failed!");
 
-	int line = 0;
+	//int line = 0;
 	while (fgets(buffer.data(), buffer.size(), pipe_fp) != nullptr) {
 		result += buffer.data();
 	}
@@ -515,18 +516,16 @@ void Game::acceptMove(Move moveToAccept) {
 }
 
 bool Game::testConnector() {
-	// 1) Run stockfish with "isready" parameter and get line number 1 from output
-	std::string output = exec_test("./connector.out isready", 1);
+	// run stockfish thorugh connector with "isready" parameter
+	std::string output = readoutput("./connector.out stockfish \"isready\n\"");
 
-	// 2) If asnswer is "readyok" means chess engine is ready to work
+	// if output is "readyok" test is passed
 	string expected_answer = "readyok";
 	string answer = output.substr(0, expected_answer.length());
 	if (answer == expected_answer)
 		return true;
 	else
 		return false;
-
-		cout<< "Answer: " << output;
 }
 
 void Game::letEngineMove() {
@@ -552,29 +551,21 @@ void Game::letEngineMove() {
 		+ chessboard.locateField(m.toPos)->indc + promoInfo + " ";
 	}
 
-	const char* run_cmd = "./connector.out";
+	string connector_cmd = "./connector.out";
+	string engine_cmd = "stockfish";
 
-	string cmd = run_cmd;
-	cmd += " \"" + moves_as_string + "\"";
+	string cmd = connector_cmd + " " + engine_cmd + " \"" + "position startpos moves " + moves_as_string + "\ngo movetime 100\n" + "\"" ;
 
+	// get output from ProgramConnector.out which is bestmove 
 	FILE *pipe_fp;
 	if (( pipe_fp = popen(cmd.c_str(), "r")) == NULL)
 	throw std::runtime_error("popen() failed!");
-
 	std::array<char, 80> buffer;
+	std::string output;	
 
-	std::string output;	// output line with bestmove from ProgramConnector.out
-
-	while (fgets(buffer.data(), buffer.size(), pipe_fp) != nullptr) {
-		if (strncmp("bestmove", buffer.data(), 8) == 0) {
-			output += buffer.data();
-
-			pclose(pipe_fp);
-			break;
-		}
-	}
-
-	//cout << "`" << output << "`" << endl;
+ 	fgets(buffer.data(), buffer.size(), pipe_fp);
+	output = buffer.data();
+	pclose(pipe_fp);
 
 	// TODO try decode 3 characters from second move to make promotion automatically
 	// decode output to get the best move as indication

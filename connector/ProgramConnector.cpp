@@ -1,3 +1,18 @@
+/*	Program's goal is to run external chess engine with commands,
+ *  receiving and print result then close chess engine.
+ *  Pipe is used to send arguments into input of forked process.
+
+ *  1) Parent process takes two arguments:
+ 	 argv[1] - command for chess engine ex. stockfish
+	 argv[2] - commands to call by chess engine ex. "isready\n"
+    and writes them into a pipe.
+ *  2) Child process runs chess engine with replaced stdid from pipe,
+ *  then it writes the line with result on stdout and closes chess engine.
+ * 
+ *  Line with result is recognized by keyword "bestmove" or
+ *  "readyok" if program was called with "isready\n" (for cheking if connection works correctly)
+ */ 
+
 #include <iostream>
 #include <string.h>
 #include <sstream>
@@ -13,42 +28,40 @@ using namespace std;
 #define OUTPUT_END 1	// OUTPUT_END means where the pipe produces output
 
 int main(int argc, char* argv[]) {
-	if (argc == 0) {
-		cerr << "Error: Program connector need an argument.\n";
+	if (argc <= 2) {
+		cerr << "Error: Program connector needs two arguments - with engine name and command to send.\n";
 		exit(1);
 	}
 
-	// if program has run with argument "isready" 
-	bool isready_test = (strcmp("isready", argv[1]) ? 0 : 1);
+	const char* keyword = (strcmp("isready\n", argv[2]) ? "bestmove" : "readyok");
 
-    int fd1[2], fd2[2];
+	// create pipe
+    int fd[2];
+	if (pipe(fd) == -1) {
+		std::cerr << "Error while creating a pipe.\n";
+		exit(1);
+	}
 
 	pid_t pid;
-	if (pipe(fd1) == -1) {
-		std::cerr << "Error while creating a pipe.\n";
-		exit(1);
-	}
-
-	if (pipe(fd2) == -1) {
-		std::cerr << "Error while creating a pipe.\n";
-		exit(1);
-	}
-
-	switch (int pid = fork()) { /* Create a child process */
+	/* Program splits here,
+	*  child starts after calling wait(0). */
+	switch (int pid = fork()) { 
 		case -1: {
 			perror("fork for rev_child");
 		}
 		break;
 		case 0: /* Child */
 		{
-			// save backup of stdin
+			// save descriptor to stdin
 			int default_input = dup(STDIN_FILENO);
 
-			// replace stdin by input from first pipe
-			dup2(fd1[INPUT_END], STDIN_FILENO);
+			// replace stdin by input from the pipe
+			dup2(fd[INPUT_END], STDIN_FILENO);
 
-			const char* cmd = "stockfish";
+			// get a name of chess engine to run
+			const char* cmd = argv[1];
 
+			// open chess engine using popen to read output
 			FILE *pipe_fp;
 			if (( pipe_fp = popen(cmd, "r")) == NULL)
 			throw std::runtime_error("popen() failed!");
@@ -56,106 +69,46 @@ int main(int argc, char* argv[]) {
 			std::array<char, 80> buffer;
 
 			while (fgets(buffer.data(), buffer.size(), pipe_fp) != nullptr) {
-
-					if (strncmp("readyok", buffer.data(), 7) == 0) {
-						//(strncmp("readyok", buffer.data(), 8) == 0) 
-						close(fd2[INPUT_END]);
-						write(fd2[OUTPUT_END], &buffer, strlen(buffer.data()) );
-						close(fd2[OUTPUT_END]);
-
-						const char* polecenie_quit = "quit\n";
-
-						// write 'quit' to first pipe (which is connected to stdin)
-						write(fd1[OUTPUT_END], polecenie_quit, strlen(polecenie_quit));
-						close(fd1[OUTPUT_END]);
-
-						pclose(pipe_fp);
-
-						break;
-					}
+			// read output buffor continuously until not see keyword
+				if (strncmp(keyword, buffer.data(), strlen(keyword)) == 0) {
 				
-				else 
-				if (strncmp("bestmove", buffer.data(), 8) == 0) {
-					// read output buffor continuously until not see 'bestmove'
-					// write answer into second pipeline which goes to the parent
-					close(fd2[INPUT_END]);
-					write(fd2[OUTPUT_END], &buffer, strlen(buffer.data()) );
-					close(fd2[OUTPUT_END]);
+					cout << buffer.data();
 
 					const char* polecenie_quit = "quit\n";
 
-					// write 'quit' to first pipe (which is connected to stdin)
-					write(fd1[OUTPUT_END], polecenie_quit, strlen(polecenie_quit));
-					close(fd1[OUTPUT_END]);
-
-					pclose(pipe_fp);
+					// write 'quit' to pipe (satdin) to close process
+					write(fd[OUTPUT_END], polecenie_quit, strlen(polecenie_quit));
+					close(fd[OUTPUT_END]);
 
 					break;
 				}
 			}
+			pclose(pipe_fp);
+
 			// restore stdin
 			dup2(default_input, STDIN_FILENO);
 
-			close(fd1[OUTPUT_END]);
-			close(fd1[INPUT_END]);
-			close(fd2[OUTPUT_END]);
-			close(fd2[INPUT_END]);
+			
+			close(fd[INPUT_END]);
+			close(fd[OUTPUT_END]);
 
 			exit(0);				// end child process here
 		} /* Child */
 		break;
 		default: /* Parent */
 		{
-			close(fd1[INPUT_END]);
-
 			ostringstream input;
 
-			// isready test detected - set input to "isready"
-			if (isready_test) {
-				input << "isready\n";
-			}
-			else
-			{
-			// send information about last move
-				input << "position startpos moves ";
-            	input << argv[1];
-				input << "\ngo movetime 100\n";
-			}
+			input << argv[2];
+
+			// send data through pipe to child process
+			write(fd[OUTPUT_END], input.str().c_str(), strlen( input.str().c_str()));
 			
 
-			// send data on through pipe to child process
-			write(fd1[OUTPUT_END], input.str().c_str(), strlen( input.str().c_str()));
-
-			wait(0);// run child process
-
-			close(fd2[OUTPUT_END]);
-
-			std::string output;
-			char buf;
-
-			// receive answer sent by child process through pipeline
-			while (read(fd2[INPUT_END], &buf, 1) > 0) {
-				output += buf;
-			}
-
-			close(fd1[INPUT_END]);
-			close(fd1[OUTPUT_END]);
-			close(fd2[OUTPUT_END]);
-			close(fd2[INPUT_END]);
-
-			// isready test detected - print output (which should be "readyok")
-			if (isready_test) {
-				cout << output;
-			}
-			else
-			// TODO try decode 3 characters from second move to make promotion automatically
-			// 3) Decode output to get the best move as indication
-			{	
-				string moveFromIndc = output.substr(9, 2);
-				string moveToIndc = output.substr(11, 2);
-
-				cout << "bestmove " << moveFromIndc << moveToIndc << endl;
-			}
+			wait(0); // run child process
+			
+			close(fd[OUTPUT_END]);
+			close(fd[INPUT_END]);
         } /* Parent */
     } /* switch (int pid = fork()) */
 
